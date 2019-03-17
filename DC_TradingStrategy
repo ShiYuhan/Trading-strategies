@@ -84,4 +84,3 @@ for x in range (1,len (dc_range)-1,1):
 print (sum)
 
 
-
