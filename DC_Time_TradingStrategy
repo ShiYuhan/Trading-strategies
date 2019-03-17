@@ -1,0 +1,127 @@
+#----------import data from excel------------
+import xlrd
+import xlwt
+import xlutils
+from xlutils.copy import copy
+from xlrd import xldate_as_tuple
+data = xlrd.open_workbook("SH2.xlsx")
+excel = copy(data)
+table_wt = excel.get_sheet(0)
+table = data.sheets()[0] # 通过索引顺序获取
+nrows = table.nrows
+ncols = table.ncols
+index_list = []
+date_list = []
+for row in range(0, nrows):
+    index_value = table.cell(row, 1).value
+    index_list.append(index_value)
+    
+    date_value=table.cell(row,0).value
+    date=xldate_as_tuple(date_value,0)
+    date_list.append(date)
+#return index_list , date_list
+
+#-----------init--------------
+p_current = index_list[0]
+p_dc_up=index_list[0]
+p_dc_down=index_list[0]
+p_os_up=index_list[0]
+p_os_down=index_list[0]
+up_trend=0
+down_trend=0
+i_current=0
+sum=100000
+theta=0.04
+long=0
+short=0
+init=100000
+hold=0
+
+#--------------up_trend or down_trend------------------
+#Calculate the DCC point of up_trend and down_trend according to the current index, m is the time to rise to DCC point in up_trend, n is the time to drop to DCC point in down_trend, compare the m&n to judge the current trend.
+while (i_current<len(index_list)):
+    
+    p_dc_up=p_current*(1+theta)
+    p_dc_down=p_current*(1-theta)
+    m=0
+    while ( p_dc_up>index_list[i_current+m] ):
+        m+=1
+        if i_current+m >= len(index_list):
+            break
+    n=0
+    while ( p_dc_down < index_list[i_current+n]):
+        n+=1
+        if i_current+n >= len(index_list):
+            break
+
+    if m > n :
+        up_trend=0
+        down_trend=1
+    else:
+        up_trend=1
+        down_trend=0
+
+
+#    ----------long-----------------
+
+    if up_trend==1:
+    
+        if i_current+(3*m) > len(index_list):
+            break
+        #--------no matter trade or not,do calculate the profit ---------
+        p_os_up=index_list[i_current+(3*m)]
+        p_current = index_list[i_current+m]
+        profit=(p_os_up-p_current)/p_current
+        sum=sum*(1+profit)
+        #--------Add a flag ：  when the trend has changed ,trade---------
+        if hold==0:
+            print('long at ',date_list[i_current+m])
+            table_wt.write(i_current+m,2,sum)
+            long+=1
+            hold=1
+
+
+
+#        excel.save("SH2.xlsx")
+
+
+        if (long == short):
+            print ('close when long at',date_list[i_current+m],'\n','profit is ',sum,'\n')
+        p_current=p_os_up
+        i_current=i_current+(3*m)
+        up_trend = 0
+
+#---------------short------------------
+
+    else:
+        if i_current+(3*n) > len(index_list):
+            break
+        #--------no matter trade or not,do calculate the profit ---------
+        p_os_down=index_list[i_current+(3*n)]
+        p_current = index_list[i_current+n]
+        profit=(p_current-p_os_down)/p_current
+        sum=sum*(1+profit)
+        #--------Add a flag ：  when the trend has changed ,trade---------
+        if hold ==1:
+            print('short at ',date_list[i_current+n])
+            table_wt.write(i_current+n,3,sum)
+            short+=1
+            hold=0
+        
+#        excel.save("SH2.xlsx")
+
+
+        if (long == short):
+            print ('close when short at',date_list[i_current+n],'\n','profit is ',sum,'\n')
+        p_current=p_os_down
+        i_current=i_current+(3*n)
+        down_trend = 0
+
+excel.save("SH2.xlsx")
+print (long,short)
+print (sum)
+
+
+
+
+
